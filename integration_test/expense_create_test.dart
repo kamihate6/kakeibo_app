@@ -4,26 +4,33 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:flutter_application_1/main.dart' as app;
 
+const testEmail = 'kakeibo003@example.com';
+
+const testPassword = '1234567890';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('支出登録フロー', (tester) async {
+  testWidgets('Expense Create Flow', (tester) async {
     app.main();
 
     await tester.pumpAndSettle();
 
-    // ログイン
+    // 未ログイン時のみログイン
 
-    await tester.enterText(
-      find.byType(TextField).at(0),
-      'kakeibo003@example.com',
-    );
+    if (find.text('ログイン').evaluate().isNotEmpty) {
+      await tester.enterText(find.byType(TextField).at(0), testEmail);
 
-    await tester.enterText(find.byType(TextField).at(1), '1234567890');
+      await tester.enterText(find.byType(TextField).at(1), testPassword);
 
-    await tester.tap(find.text('ログイン'));
+      await tester.tap(find.text('ログイン'));
 
-    await tester.pumpAndSettle(const Duration(seconds: 5));
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+    }
+
+    // Home画面確認
+
+    expect(find.text('支出登録'), findsOneWidget);
 
     // 支出登録画面へ
 
@@ -39,13 +46,34 @@ void main() {
 
     await tester.enterText(find.byType(TextField).at(1), 'integration_test');
 
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+
+    // カテゴリ選択
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+
+    // 食費が表示されていることを確認
+
+    expect(find.text('食費'), findsWidgets);
+
+    // 食費選択
+
+    await tester.tap(find.text('食費').first);
+
+    await tester.pumpAndSettle();
+
     // 保存
+    await tester.tap(find.byType(ElevatedButton));
 
-    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
 
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await tester.tap(find.text('保存'), warnIfMissed: false);
 
-    // Snackbar確認
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    // 完了確認
 
     expect(find.text('支出登録完了'), findsOneWidget);
   });

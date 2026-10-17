@@ -11,20 +11,26 @@ const testPassword = '1234567890';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('ダッシュボード表示', (tester) async {
+  testWidgets('Dashboard View', (tester) async {
     app.main();
 
     await tester.pumpAndSettle();
 
-    // ログイン
+    // 未ログイン時のみログイン
 
-    await tester.enterText(find.byType(TextField).at(0), testEmail);
+    if (find.text('ログイン').evaluate().isNotEmpty) {
+      await tester.enterText(find.byType(TextField).at(0), testEmail);
 
-    await tester.enterText(find.byType(TextField).at(1), testPassword);
+      await tester.enterText(find.byType(TextField).at(1), testPassword);
 
-    await tester.tap(find.text('ログイン'));
+      await tester.tap(find.text('ログイン'));
 
-    await tester.pumpAndSettle(const Duration(seconds: 5));
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+    }
+
+    // Home画面確認
+
+    expect(find.text('ダッシュボード'), findsOneWidget);
 
     // ダッシュボードへ
 

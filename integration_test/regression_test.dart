@@ -11,22 +11,24 @@ const testPassword = '1234567890';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Ver1 回帰テスト', (tester) async {
+  testWidgets('Regression Suite', (tester) async {
     app.main();
 
     await tester.pumpAndSettle();
 
-    // ログイン
+    // 未ログイン時のみログイン
 
-    await tester.enterText(find.byType(TextField).at(0), testEmail);
+    if (find.text('ログイン').evaluate().isNotEmpty) {
+      await tester.enterText(find.byType(TextField).at(0), testEmail);
 
-    await tester.enterText(find.byType(TextField).at(1), testPassword);
+      await tester.enterText(find.byType(TextField).at(1), testPassword);
 
-    await tester.tap(find.text('ログイン'));
+      await tester.tap(find.text('ログイン'));
 
-    await tester.pumpAndSettle(const Duration(seconds: 5));
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+    }
 
-    // Home確認
+    // Home画面確認
 
     expect(find.text('支出登録'), findsOneWidget);
 
