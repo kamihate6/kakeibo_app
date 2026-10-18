@@ -14,7 +14,9 @@ $tests = @(
 
     "integration_test/budget_create_test.dart",
 
-    "integration_test/dashboard_view_test.dart"
+    "integration_test/dashboard_view_test.dart",
+
+    "integration_test/logout_test.dart"
 
 )
 
