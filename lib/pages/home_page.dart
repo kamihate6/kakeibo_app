@@ -5,6 +5,7 @@ import 'add_expense_page.dart';
 import 'history_page.dart';
 import 'budget_page.dart';
 import 'dashboard_page.dart';
+import 'category_management_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -76,6 +77,19 @@ class HomePage extends StatelessWidget {
                 );
               },
               child: const Text('ダッシュボード'),
+            ),
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CategoryManagementPage(),
+                  ),
+                );
+              },
+              child: const Text('カテゴリ管理'),
             ),
           ],
         ),

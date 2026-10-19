@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/category_service.dart';
+
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
 
@@ -28,16 +30,13 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
     if (user == null) return;
 
-    final member = await Supabase.instance.client
-        .from('household_members')
-        .select()
-        .eq('user_id', user.id)
-        .single();
+    // final member = await Supabase.instance.client
+    //     .from('household_members')
+    //     .select()
+    //     .eq('user_id', user.id)
+    //     .single();
 
-    final result = await Supabase.instance.client
-        .from('categories')
-        .select()
-        .eq('household_id', member['household_id']);
+    final result = await CategoryService.getCategories();
 
     setState(() {
       categories = result;
