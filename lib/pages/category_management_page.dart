@@ -31,13 +31,24 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('カテゴリ管理')),
-      body: ListView.builder(
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
+      body: ListView(
+        children: categories.where((c) => c['parent_category_id'] == null).map((
+          parent,
+        ) {
+          final childCategories = categories
+              .where((c) => c['parent_category_id'] == parent['id'])
+              .toList();
 
-          return ListTile(title: Text(category['name']));
-        },
+          return ExpansionTile(
+            title: Text(parent['name']),
+            children: childCategories.map((child) {
+              return ListTile(
+                leading: const Icon(Icons.subdirectory_arrow_right),
+                title: Text(child['name']),
+              );
+            }).toList(),
+          );
+        }).toList(),
       ),
 
       floatingActionButton: FloatingActionButton(
