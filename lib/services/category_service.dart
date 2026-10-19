@@ -19,7 +19,9 @@ class CategoryService {
         .select()
         .eq('household_id', member['household_id'])
         .eq('is_active', true)
-        .order('sort_order');
+        .order('parent_category_id')
+        .order('sort_order')
+        .order('name');
   }
 
   static Future<void> createCategory({
@@ -44,5 +46,25 @@ class CategoryService {
       'sort_order': 0,
       'is_active': true,
     });
+  }
+
+  static Future<void> updateCategory({
+    required String categoryId,
+    required String name,
+  }) async {
+    await Supabase.instance.client
+        .from('categories')
+        .update({'name': name, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', categoryId);
+  }
+
+  static Future<void> deactivateCategory({required String categoryId}) async {
+    await Supabase.instance.client
+        .from('categories')
+        .update({
+          'is_active': false,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', categoryId);
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'category_create_page.dart';
+import 'category_edit_page.dart';
+
 import '../services/category_service.dart';
 
 class CategoryManagementPage extends StatefulWidget {
@@ -40,11 +42,42 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
               .toList();
 
           return ExpansionTile(
-            title: Text(parent['name']),
+            title: Row(
+              children: [
+                Expanded(child: Text(parent['name'])),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CategoryEditPage(category: parent),
+                      ),
+                    ).then((_) {
+                      loadCategories();
+                    });
+                  },
+                ),
+              ],
+            ),
+
             children: childCategories.map((child) {
               return ListTile(
                 leading: const Icon(Icons.subdirectory_arrow_right),
                 title: Text(child['name']),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CategoryEditPage(category: child),
+                      ),
+                    ).then((_) {
+                      loadCategories();
+                    });
+                  },
+                ),
               );
             }).toList(),
           );
