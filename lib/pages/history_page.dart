@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/category_service.dart';
+
 import 'expense_edit_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -13,6 +15,8 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> expenses = [];
 
+  Map<String, dynamic> categoryMap = {};
+
   @override
   void initState() {
     super.initState();
@@ -21,6 +25,14 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Future<void> loadExpenses() async {
     final user = Supabase.instance.client.auth.currentUser;
+
+    final allCategories = await CategoryService.getCategories();
+
+    final map = <String, dynamic>{};
+
+    for (final category in allCategories) {
+      map[category['id']] = category;
+    }
 
     if (user == null) return;
 
@@ -44,13 +56,28 @@ class _HistoryPageState extends State<HistoryPage> {
         .eq('status', 'ACTIVE')
         .order('expense_date', ascending: false);
 
-    for (final expense in result) {
-      debugPrint(expense['categories'].toString());
-    }
-
     setState(() {
       expenses = result;
+      categoryMap = map;
     });
+  }
+
+  String getCategoryDisplayName(Map<String, dynamic> expense) {
+    final category = expense['categories'];
+
+    final parentId = category['parent_category_id'];
+
+    if (parentId == null) {
+      return category['name'];
+    }
+
+    final parent = categoryMap[parentId];
+
+    if (parent == null) {
+      return category['name'];
+    }
+
+    return '${parent['name']} > ${category['name']}';
   }
 
   @override
@@ -90,7 +117,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          expense['categories']['name'],
+                          getCategoryDisplayName(expense),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         if ((expense['memo'] ?? '').isNotEmpty)
@@ -98,7 +125,10 @@ class _HistoryPageState extends State<HistoryPage> {
                       ],
                     ),
 
-                    trailing: Text(expense['expense_date'].toString()),
+                    trailing: Text(
+                      expense['expense_date'].toString().replaceAll('-', '/'),
+                    ),
+
                     onLongPress: () async {
                       final result = await showDialog<bool>(
                         context: context,

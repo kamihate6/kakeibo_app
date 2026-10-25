@@ -59,24 +59,37 @@ class _ExpenseEditPageState extends State<ExpenseEditPage> {
 
     if (currentCategory.isEmpty) return;
 
-    final parentId = currentCategory['parent_category_id'];
+    String? parentId;
+    List<dynamic> children = [];
+    String? childId;
 
-    final children = result
-        .where((c) => c['parent_category_id'] == parentId)
-        .toList();
+    if (currentCategory['parent_category_id'] == null) {
+      parentId = currentCategory['id'];
+
+      children = result
+          .where((c) => c['parent_category_id'] == parentId)
+          .toList();
+
+      childId = null;
+    } else {
+      parentId = currentCategory['parent_category_id'];
+
+      children = result
+          .where((c) => c['parent_category_id'] == parentId)
+          .toList();
+
+      childId = currentCategory['id'];
+    }
 
     if (!mounted) return;
 
     setState(() {
       categories = result;
-
       parentCategories = parents;
 
       selectedParentId = parentId;
-
       childCategories = children;
-
-      selectedChildId = currentCategoryId;
+      selectedChildId = childId;
     });
   }
 
@@ -165,6 +178,7 @@ class _ExpenseEditPageState extends State<ExpenseEditPage> {
 
             DropdownButtonFormField<String>(
               value: selectedChildId,
+              hint: const Text('子カテゴリを選択'),
               decoration: const InputDecoration(labelText: '子カテゴリ'),
               items: childCategories.map((category) {
                 return DropdownMenuItem<String>(
