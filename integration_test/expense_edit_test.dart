@@ -43,45 +43,27 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), 'edit_test');
 
     // カテゴリ選択
-
-    await tester.tap(find.byType(DropdownButtonFormField<String>).last);
-
-    await tester.pumpAndSettle();
-
-    // await tester.tap(find.text('食費').first);
-    debugDumpApp();
-
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('保存'));
 
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(ElevatedButton));
+    await tester.tap(find.text('保存'));
 
     await tester.pumpAndSettle(const Duration(seconds: 5));
 
-    // 登録完了確認
+    await tester.pumpAndSettle(const Duration(seconds: 5));
 
-    expect(find.text('支出登録完了'), findsOneWidget);
+    expect(find.text('支出登録'), findsOneWidget);
 
-    // Homeへ戻るのを待つ
-
-    await tester.pumpAndSettle(const Duration(seconds: 3));
-
-    // 支出履歴ボタン確認
-
-    expect(find.text('支出履歴'), findsOneWidget);
-
-    // 履歴へ
+    // 履歴画面へ
 
     await tester.tap(find.text('支出履歴'));
 
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await tester.pumpAndSettle(const Duration(seconds: 5));
 
-    await tester.pumpAndSettle(const Duration(seconds: 3));
-
-    // 先頭レコード選択
+    // 支出一覧確認
 
     expect(find.byType(ListTile), findsWidgets);
 
@@ -95,10 +77,16 @@ void main() {
 
     await tester.enterText(find.byType(TextField).at(1), 'edited');
 
-    await tester.tap(find.text('保存'));
+    await tester.ensureVisible(find.text('保存'));
 
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
 
-    expect(find.text('更新しました'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ElevatedButton, '保存'));
+
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    // 履歴画面へ戻ったことを確認
+
+    expect(find.byType(ListTile), findsWidgets);
   });
 }

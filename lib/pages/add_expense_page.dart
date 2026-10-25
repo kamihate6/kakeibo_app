@@ -13,7 +13,15 @@ class AddExpensePage extends StatefulWidget {
 class _AddExpensePageState extends State<AddExpensePage> {
   List<dynamic> categories = [];
 
-  String? selectedCategoryId;
+  List<dynamic> parentCategories = [];
+
+  List<dynamic> childCategories = [];
+
+  String? selectedParentId;
+
+  String? selectedChildId;
+
+  DateTime selectedDate = DateTime.now();
 
   final amountController = TextEditingController();
 
@@ -26,24 +34,47 @@ class _AddExpensePageState extends State<AddExpensePage> {
   }
 
   Future<void> loadCategories() async {
-    final user = Supabase.instance.client.auth.currentUser;
-
-    if (user == null) return;
-
-    // final member = await Supabase.instance.client
-    //     .from('household_members')
-    //     .select()
-    //     .eq('user_id', user.id)
-    //     .single();
-
     final result = await CategoryService.getCategories();
+
+    final parents = result
+        .where((c) => c['parent_category_id'] == null)
+        .toList();
+
+    if (!mounted) return;
 
     setState(() {
       categories = result;
 
-      if (result.isNotEmpty) {
-        selectedCategoryId = result.first['id'];
+      parentCategories = parents;
+
+      if (parents.isNotEmpty) {
+        selectedParentId = parents.first['id'];
+
+        childCategories = result
+            .where((c) => c['parent_category_id'] == selectedParentId)
+            .toList();
+
+        if (childCategories.isNotEmpty) {
+          selectedChildId = childCategories.first['id'];
+        } else {
+          selectedChildId = null;
+        }
       }
+    });
+  }
+
+  Future<void> selectDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate == null) return;
+
+    setState(() {
+      selectedDate = pickedDate;
     });
   }
 
@@ -52,6 +83,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
       if (amountController.text.isEmpty) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('金額を入力してください')));
+        return;
+      }
+
+      if (selectedChildId == null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('子カテゴリを選択してください')));
         return;
       }
 
@@ -67,28 +104,38 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
       final householdId = member['household_id'];
 
+      debugPrint('selectedChildId=$selectedChildId');
+
+      debugPrint('before insert');
+
       await Supabase.instance.client.from('expenses').insert({
         'household_id': householdId,
         'user_id': user.id,
-        'category_id': selectedCategoryId,
+        'category_id': selectedChildId,
         'payer_user_id': user.id,
         'amount': int.parse(amountController.text),
-        'expense_date': DateTime.now().toIso8601String().substring(0, 10),
+
+        'expense_date': selectedDate.toIso8601String().substring(0, 10),
+
         'expense_type': 'HOUSEHOLD',
         'memo': memoController.text,
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('支出登録完了')));
+      debugPrint('after insert');
 
-        Navigator.pop(context);
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('支出登録完了')));
+
+      Navigator.pop(context);
+
+      debugPrint('after pop');
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(e.toString())));
 
-      print(e);
+      debugPrint(e.toString());
     }
   }
 
@@ -109,20 +156,59 @@ class _AddExpensePageState extends State<AddExpensePage> {
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
-              value: selectedCategoryId,
-              decoration: const InputDecoration(labelText: 'カテゴリ'),
-              items: categories.map((category) {
+              value: selectedParentId,
+              decoration: const InputDecoration(labelText: '親カテゴリ'),
+              items: parentCategories.map((category) {
                 return DropdownMenuItem<String>(
                   value: category['id'],
                   child: Text(category['name']),
                 );
               }).toList(),
-
               onChanged: (value) {
                 setState(() {
-                  selectedCategoryId = value;
+                  selectedParentId = value;
+
+                  childCategories = categories
+                      .where((c) => c['parent_category_id'] == value)
+                      .toList();
+
+                  if (childCategories.isNotEmpty) {
+                    selectedChildId = childCategories.first['id'];
+                  } else {
+                    selectedChildId = null;
+                  }
                 });
               },
+            ),
+
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              value: selectedChildId,
+              decoration: const InputDecoration(labelText: '子カテゴリ'),
+              items: childCategories.map((category) {
+                return DropdownMenuItem<String>(
+                  value: category['id'],
+                  child: Text(category['name']),
+                );
+              }).toList(),
+              onChanged: childCategories.isEmpty
+                  ? null
+                  : (value) {
+                      setState(() {
+                        selectedChildId = value;
+                      });
+                    },
+            ),
+
+            const SizedBox(height: 16),
+
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('支払日'),
+              subtitle: Text(selectedDate.toIso8601String().substring(0, 10)),
+              trailing: const Icon(Icons.calendar_month),
+              onTap: selectDate,
             ),
 
             const SizedBox(height: 16),

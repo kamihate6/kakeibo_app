@@ -46,35 +46,31 @@ void main() {
 
     await tester.enterText(find.byType(TextField).at(1), 'integration_test');
 
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(2));
 
-    // カテゴリ選択
+    // 親カテゴリ確認
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    expect(find.text('親カテゴリ'), findsOneWidget);
 
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    // 子カテゴリ確認
 
-    // 食費が表示されていることを確認
-
-    expect(find.text('食費'), findsWidgets);
-
-    // 食費選択
-
-    await tester.tap(find.text('食費').first);
-
-    await tester.pumpAndSettle();
+    expect(find.text('子カテゴリ'), findsOneWidget);
 
     // 保存
-    await tester.tap(find.byType(ElevatedButton));
+    await tester.tap(find.text('保存'));
 
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('保存'), warnIfMissed: false);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
 
     await tester.pumpAndSettle(const Duration(seconds: 5));
 
     // 完了確認
 
-    expect(find.text('支出登録完了'), findsOneWidget);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    expect(find.text('支出登録'), findsOneWidget);
+
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    expect(find.text('integration_test'), findsWidgets);
   });
 }

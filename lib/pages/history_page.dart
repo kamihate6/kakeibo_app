@@ -34,11 +34,19 @@ class _HistoryPageState extends State<HistoryPage> {
         .from('expenses')
         .select('''
       *,
-      categories(name)
+      categories(
+        id,
+        name,
+        parent_category_id
+      )
     ''')
         .eq('household_id', member['household_id'])
         .eq('status', 'ACTIVE')
         .order('expense_date', ascending: false);
+
+    for (final expense in result) {
+      debugPrint(expense['categories'].toString());
+    }
 
     setState(() {
       expenses = result;
@@ -77,9 +85,17 @@ class _HistoryPageState extends State<HistoryPage> {
 
                     title: Text('${expense['amount']}円'),
 
-                    subtitle: Text(
-                      '${expense['categories']['name']} '
-                      '${expense['memo'] ?? ''}',
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          expense['categories']['name'],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if ((expense['memo'] ?? '').isNotEmpty)
+                          Text(expense['memo']),
+                      ],
                     ),
 
                     trailing: Text(expense['expense_date'].toString()),
