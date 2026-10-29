@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/current_household_provider.dart';
+import '../services/category_service.dart';
 
 class BudgetPage extends StatefulWidget {
   const BudgetPage({super.key});
@@ -18,24 +22,20 @@ class _BudgetPageState extends State<BudgetPage> {
   @override
   void initState() {
     super.initState();
-    loadCategories();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadCategories();
+    });
   }
 
   Future<void> loadCategories() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
 
-    if (user == null) return;
+    if (householdId == null) {
+      return;
+    }
 
-    final member = await Supabase.instance.client
-        .from('household_members')
-        .select()
-        .eq('user_id', user.id)
-        .single();
-
-    final result = await Supabase.instance.client
-        .from('categories')
-        .select()
-        .eq('household_id', member['household_id']);
+    final result = await CategoryService.getParentCategories(householdId);
 
     setState(() {
       categories = result;
@@ -52,13 +52,11 @@ class _BudgetPageState extends State<BudgetPage> {
 
       if (user == null) return;
 
-      final member = await Supabase.instance.client
-          .from('household_members')
-          .select()
-          .eq('user_id', user.id)
-          .single();
+      final householdId = context.read<CurrentHouseholdProvider>().householdId;
 
-      final householdId = member['household_id'];
+      if (householdId == null) {
+        return;
+      }
 
       final existingPlans = await Supabase.instance.client
           .from('budget_plans')

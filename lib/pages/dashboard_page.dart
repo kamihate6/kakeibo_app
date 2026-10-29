@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/current_household_provider.dart';
 
 List<Map<String, dynamic>> categorySummaries = [];
 
@@ -17,25 +20,28 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    loadData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadData();
+    });
   }
 
   Future<void> loadData() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
 
-    if (user == null) return;
-
-    final member = await Supabase.instance.client
-        .from('household_members')
-        .select()
-        .eq('user_id', user.id)
-        .single();
-
-    final householdId = member['household_id'];
+    if (householdId == null) {
+      return;
+    }
 
     final budgetItems = await Supabase.instance.client
         .from('budget_items')
-        .select('yearly_amount');
+        .select('''
+      yearly_amount,
+      budget_plans!inner(
+        household_id
+      )
+    ''')
+        .eq('budget_plans.household_id', householdId);
 
     final now = DateTime.now();
 
@@ -65,12 +71,17 @@ class _DashboardPageState extends State<DashboardPage> {
     final budgetDetails = await Supabase.instance.client
         .from('budget_items')
         .select('''
-          yearly_amount,
-          categories(
-            id,
-            name
-          )
-        ''');
+      yearly_amount,
+      categories(
+        id,
+        name
+      ),
+      budget_plans!inner(
+        household_id
+      )
+    ''')
+        .eq('budget_plans.household_id', householdId);
+
     final List<Map<String, dynamic>> summaries = [];
 
     for (final budget in budgetDetails) {
@@ -81,6 +92,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final categoryExpenses = await Supabase.instance.client
           .from('expenses')
           .select('amount')
+          .eq('household_id', householdId)
           .eq('category_id', category['id'])
           .eq('status', 'ACTIVE');
 

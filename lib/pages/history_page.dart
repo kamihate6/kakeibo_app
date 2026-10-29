@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/current_household_provider.dart';
 import '../services/category_service.dart';
 
 import 'expense_edit_page.dart';
@@ -20,27 +22,26 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    loadExpenses();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadExpenses();
+    });
   }
 
   Future<void> loadExpenses() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
 
-    final allCategories = await CategoryService.getCategories();
+    if (householdId == null) {
+      return;
+    }
+
+    final allCategories = await CategoryService.getCategories(householdId);
 
     final map = <String, dynamic>{};
 
     for (final category in allCategories) {
       map[category['id']] = category;
     }
-
-    if (user == null) return;
-
-    final member = await Supabase.instance.client
-        .from('household_members')
-        .select()
-        .eq('user_id', user.id)
-        .single();
 
     final result = await Supabase.instance.client
         .from('expenses')
@@ -52,7 +53,7 @@ class _HistoryPageState extends State<HistoryPage> {
         parent_category_id
       )
     ''')
-        .eq('household_id', member['household_id'])
+        .eq('household_id', householdId)
         .eq('status', 'ACTIVE')
         .order('expense_date', ascending: false);
 

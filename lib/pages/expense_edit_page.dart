@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/current_household_provider.dart';
 import '../services/category_service.dart';
 
 class ExpenseEditPage extends StatefulWidget {
@@ -40,11 +42,19 @@ class _ExpenseEditPageState extends State<ExpenseEditPage> {
 
     selectedDate = DateTime.parse(widget.expense['expense_date']);
 
-    loadCategories();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadCategories();
+    });
   }
 
   Future<void> loadCategories() async {
-    final result = await CategoryService.getCategories();
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
+
+    if (householdId == null) {
+      return;
+    }
+
+    final result = await CategoryService.getParentCategories(householdId);
 
     final parents = result
         .where((c) => c['parent_category_id'] == null)

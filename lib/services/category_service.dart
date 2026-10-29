@@ -1,7 +1,18 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CategoryService {
-  static Future<List<dynamic>> getCategories() async {
+  static Future<List<dynamic>> getCategories([String? householdId]) async {
+    if (householdId != null) {
+      return await Supabase.instance.client
+          .from('categories')
+          .select()
+          .eq('household_id', householdId)
+          .eq('is_active', true)
+          .order('parent_category_id')
+          .order('sort_order')
+          .order('name');
+    }
+
     final user = Supabase.instance.client.auth.currentUser;
 
     if (user == null) {
@@ -25,21 +36,12 @@ class CategoryService {
   }
 
   static Future<void> createCategory({
+    required String householdId,
     required String parentCategoryId,
     required String name,
   }) async {
-    final user = Supabase.instance.client.auth.currentUser;
-
-    if (user == null) return;
-
-    final member = await Supabase.instance.client
-        .from('household_members')
-        .select()
-        .eq('user_id', user.id)
-        .single();
-
     await Supabase.instance.client.from('categories').insert({
-      'household_id': member['household_id'],
+      'household_id': householdId,
       'parent_category_id': parentCategoryId,
       'name': name,
       'type': 'BOTH',
@@ -66,5 +68,16 @@ class CategoryService {
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', categoryId);
+  }
+
+  static Future<List<dynamic>> getParentCategories(String householdId) async {
+    return await Supabase.instance.client
+        .from('categories')
+        .select()
+        .eq('household_id', householdId)
+        .isFilter('parent_category_id', null)
+        .eq('is_active', true)
+        .order('sort_order')
+        .order('name');
   }
 }

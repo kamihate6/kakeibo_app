@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/current_household_provider.dart';
 import '../services/category_service.dart';
 
 class CategoryCreatePage extends StatefulWidget {
@@ -19,11 +21,20 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
   @override
   void initState() {
     super.initState();
-    loadParentCategories();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadParentCategories();
+    });
   }
 
   Future<void> loadParentCategories() async {
-    final categories = await CategoryService.getCategories();
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
+
+    if (householdId == null) {
+      return;
+    }
+
+    final categories = await CategoryService.getCategories(householdId);
 
     final parents = categories
         .where((c) => c['parent_category_id'] == null)
@@ -89,7 +100,14 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
       return;
     }
 
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
+
+    if (householdId == null) {
+      return;
+    }
+
     await CategoryService.createCategory(
+      householdId: householdId,
       parentCategoryId: selectedParentId!,
       name: nameController.text,
     );

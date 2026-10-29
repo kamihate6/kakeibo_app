@@ -3,6 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/splash_page.dart';
 
+import 'package:provider/provider.dart';
+
+import 'providers/current_household_provider.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -11,7 +15,12 @@ Future<void> main() async {
     anonKey: 'sb_publishable_-Fgs_vTozv5ywtpzD5KYKg_mWy4sAgo',
   );
 
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => CurrentHouseholdProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

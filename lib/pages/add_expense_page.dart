@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 import '../services/category_service.dart';
+
+import '../providers/current_household_provider.dart';
 
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
@@ -30,11 +33,20 @@ class _AddExpensePageState extends State<AddExpensePage> {
   @override
   void initState() {
     super.initState();
-    loadCategories();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadCategories();
+    });
   }
 
   Future<void> loadCategories() async {
-    final result = await CategoryService.getCategories();
+    final householdId = context.read<CurrentHouseholdProvider>().householdId;
+
+    if (householdId == null) {
+      return;
+    }
+
+    final result = await CategoryService.getParentCategories(householdId);
 
     final parents = result
         .where((c) => c['parent_category_id'] == null)
@@ -96,14 +108,13 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
       if (user == null) return;
 
-      final member = await Supabase.instance.client
-          .from('household_members')
-          .select()
-          .eq('user_id', user.id)
-          .single();
+      final householdId = context.read<CurrentHouseholdProvider>().householdId;
 
-      final householdId = member['household_id'];
-
+      if (householdId == null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('家計簿が選択されていません')));
+        return;
+      }
       debugPrint('selectedChildId=$selectedChildId');
 
       debugPrint('before insert');
