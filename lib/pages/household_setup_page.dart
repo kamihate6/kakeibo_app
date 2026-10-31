@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'home_page.dart';
+import '../services/household_service.dart';
 
 class HouseholdSetupPage extends StatefulWidget {
   const HouseholdSetupPage({super.key});
@@ -22,35 +22,7 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
     }
 
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-
-      if (user == null) return;
-
-      final household = await Supabase.instance.client
-          .from('households')
-          .insert({
-            'name': householdController.text.trim(),
-            'owner_user_id': user.id,
-          })
-          .select()
-          .single();
-
-      await Supabase.instance.client.from('household_members').insert({
-        'household_id': household['id'],
-        'user_id': user.id,
-        'role': 'ADMIN',
-      });
-
-      await Supabase.instance.client.from('categories').insert([
-        {'household_id': household['id'], 'name': '食費', 'type': 'BOTH'},
-        {'household_id': household['id'], 'name': '日用品', 'type': 'BOTH'},
-        {'household_id': household['id'], 'name': '住宅', 'type': 'HOUSEHOLD'},
-        {'household_id': household['id'], 'name': '通信費', 'type': 'BOTH'},
-        {'household_id': household['id'], 'name': '交通費', 'type': 'BOTH'},
-        {'household_id': household['id'], 'name': '医療費', 'type': 'BOTH'},
-        {'household_id': household['id'], 'name': '娯楽', 'type': 'BOTH'},
-        {'household_id': household['id'], 'name': 'その他', 'type': 'BOTH'},
-      ]);
+      await HouseholdService.createHousehold(householdController.text.trim());
 
       if (mounted) {
         Navigator.pushReplacement(

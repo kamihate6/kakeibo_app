@@ -46,3 +46,10 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Supabase local files
+supabase/.temp/

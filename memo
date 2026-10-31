@@ -19,3 +19,11 @@ git push origin v1.1.0
 新規ブランチ作成
 git pull origin develop
 git checkout -b feature/
+
+データベース接続
+本番環境
+npx supabase link --project-ref tkhajeoffjvvrampqbnw
+開発環境
+npx supabase link --project-ref xbgpdfzlwfvpbqfyyzgk
+接続先確認
+npx supabase projects list

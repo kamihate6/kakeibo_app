@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 
 import 'add_expense_page.dart';
 import 'history_page.dart';
@@ -8,6 +9,9 @@ import 'budget_page.dart';
 import 'dashboard_page.dart';
 import 'category_management_page.dart';
 import 'household_create_page.dart';
+import 'join_household_page.dart';
+import 'household_members_page.dart';
+import 'household_management_page.dart';
 
 import '../providers/current_household_provider.dart';
 import '../services/household_service.dart';
@@ -51,6 +55,22 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<CurrentHouseholdProvider>();
+
+    dynamic selectedHousehold;
+
+    if (households.isNotEmpty) {
+      final matched = households.where(
+        (h) => h['households']['id'] == provider.householdId,
+      );
+
+      if (matched.isNotEmpty) {
+        selectedHousehold = matched.first['households'];
+      } else {
+        selectedHousehold = households.first['households'];
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: households.isEmpty
@@ -82,6 +102,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
+
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -173,6 +194,38 @@ class _HomePageState extends State<HomePage> {
                 loadHouseholds();
               },
               child: const Text('家計簿作成'),
+            ),
+
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const JoinHouseholdPage()),
+                ).then((_) {
+                  loadHouseholds();
+                });
+              },
+              child: const Text('家計簿参加'),
+            ),
+
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: selectedHousehold == null
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HouseholdManagementPage(
+                            household: selectedHousehold,
+                          ),
+                        ),
+                      );
+                    },
+              child: const Text('家計簿管理'),
             ),
           ],
         ),
