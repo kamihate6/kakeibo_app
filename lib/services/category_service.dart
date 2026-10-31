@@ -80,4 +80,15 @@ class CategoryService {
         .order('sort_order')
         .order('name');
   }
+
+  static Future<List<dynamic>> getAllCategories(String householdId) async {
+    return await Supabase.instance.client
+        .from('categories')
+        .select()
+        .eq('household_id', householdId)
+        .eq('is_active', true)
+        .order('parent_category_id')
+        .order('sort_order')
+        .order('name');
+  }
 }

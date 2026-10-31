@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/loading_overlay.dart';
+
 import 'home_page.dart';
 import '../services/household_service.dart';
 
@@ -13,6 +15,8 @@ class HouseholdSetupPage extends StatefulWidget {
 class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
   final householdController = TextEditingController();
 
+  bool isLoading = false;
+
   Future<void> createHousehold() async {
     if (householdController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context)
@@ -20,6 +24,10 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
 
       return;
     }
+
+    setState(() {
+      isLoading = true;
+    });
 
     try {
       await HouseholdService.createHousehold(householdController.text.trim());
@@ -35,6 +43,12 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(e.toString())));
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -42,22 +56,26 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('世帯作成')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: householdController,
-              decoration: const InputDecoration(labelText: '世帯名'),
-            ),
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        message: '世帯を作成中...',
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: householdController,
+                decoration: const InputDecoration(labelText: '世帯名'),
+              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            ElevatedButton(
-              onPressed: createHousehold,
-              child: const Text('世帯作成'),
-            ),
-          ],
+              ElevatedButton(
+                onPressed: isLoading ? null : createHousehold,
+                child: const Text('世帯作成'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 
+import '../widgets/loading_overlay.dart';
 import '../services/category_service.dart';
-
 import '../providers/current_household_provider.dart';
 
 class AddExpensePage extends StatefulWidget {
@@ -30,6 +30,8 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
   final memoController = TextEditingController();
 
+  bool isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -52,7 +54,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
         .where((c) => c['parent_category_id'] == null)
         .toList();
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       categories = result;
@@ -83,7 +87,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
       lastDate: DateTime(2100),
     );
 
-    if (pickedDate == null) return;
+    if (pickedDate == null) {
+      return;
+    }
 
     setState(() {
       selectedDate = pickedDate;
@@ -91,33 +97,39 @@ class _AddExpensePageState extends State<AddExpensePage> {
   }
 
   Future<void> saveExpense() async {
+    setState(() {
+      isLoading = true;
+    });
+
     try {
       if (amountController.text.isEmpty) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('金額を入力してください')));
+
         return;
       }
 
       if (selectedChildId == null) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('子カテゴリを選択してください')));
+
         return;
       }
 
       final user = Supabase.instance.client.auth.currentUser;
 
-      if (user == null) return;
+      if (user == null) {
+        return;
+      }
 
       final householdId = context.read<CurrentHouseholdProvider>().householdId;
 
       if (householdId == null) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('家計簿が選択されていません')));
+
         return;
       }
-      debugPrint('selectedChildId=$selectedChildId');
-
-      debugPrint('before insert');
 
       await Supabase.instance.client.from('expenses').insert({
         'household_id': householdId,
@@ -125,28 +137,32 @@ class _AddExpensePageState extends State<AddExpensePage> {
         'category_id': selectedChildId,
         'payer_user_id': user.id,
         'amount': int.parse(amountController.text),
-
         'expense_date': selectedDate.toIso8601String().substring(0, 10),
-
         'expense_type': 'HOUSEHOLD',
         'memo': memoController.text,
       });
 
-      debugPrint('after insert');
-
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('支出登録完了')));
 
       Navigator.pop(context);
-
-      debugPrint('after pop');
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(e.toString())));
-
-      debugPrint(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -154,85 +170,92 @@ class _AddExpensePageState extends State<AddExpensePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('支出登録')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: amountController,
-              decoration: const InputDecoration(labelText: '金額'),
-              keyboardType: TextInputType.number,
-            ),
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        message: '支出を登録中...',
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: amountController,
+                decoration: const InputDecoration(labelText: '金額'),
+                keyboardType: TextInputType.number,
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            DropdownButtonFormField<String>(
-              value: selectedParentId,
-              decoration: const InputDecoration(labelText: '親カテゴリ'),
-              items: parentCategories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category['id'],
-                  child: Text(category['name']),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedParentId = value;
+              DropdownButtonFormField<String>(
+                value: selectedParentId,
+                decoration: const InputDecoration(labelText: '親カテゴリ'),
+                items: parentCategories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category['id'],
+                    child: Text(category['name']),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedParentId = value;
 
-                  childCategories = categories
-                      .where((c) => c['parent_category_id'] == value)
-                      .toList();
+                    childCategories = categories
+                        .where((c) => c['parent_category_id'] == value)
+                        .toList();
 
-                  if (childCategories.isNotEmpty) {
-                    selectedChildId = childCategories.first['id'];
-                  } else {
-                    selectedChildId = null;
-                  }
-                });
-              },
-            ),
+                    if (childCategories.isNotEmpty) {
+                      selectedChildId = childCategories.first['id'];
+                    } else {
+                      selectedChildId = null;
+                    }
+                  });
+                },
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            DropdownButtonFormField<String>(
-              value: selectedChildId,
-              decoration: const InputDecoration(labelText: '子カテゴリ'),
-              items: childCategories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category['id'],
-                  child: Text(category['name']),
-                );
-              }).toList(),
-              onChanged: childCategories.isEmpty
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedChildId = value;
-                      });
-                    },
-            ),
+              DropdownButtonFormField<String>(
+                value: selectedChildId,
+                decoration: const InputDecoration(labelText: '子カテゴリ'),
+                items: childCategories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category['id'],
+                    child: Text(category['name']),
+                  );
+                }).toList(),
+                onChanged: childCategories.isEmpty
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedChildId = value;
+                        });
+                      },
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('支払日'),
-              subtitle: Text(selectedDate.toIso8601String().substring(0, 10)),
-              trailing: const Icon(Icons.calendar_month),
-              onTap: selectDate,
-            ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('支払日'),
+                subtitle: Text(selectedDate.toIso8601String().substring(0, 10)),
+                trailing: const Icon(Icons.calendar_month),
+                onTap: selectDate,
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            TextField(
-              controller: memoController,
-              decoration: const InputDecoration(labelText: 'メモ'),
-            ),
+              TextField(
+                controller: memoController,
+                decoration: const InputDecoration(labelText: 'メモ'),
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            ElevatedButton(onPressed: saveExpense, child: const Text('保存')),
-          ],
+              ElevatedButton(
+                onPressed: isLoading ? null : saveExpense,
+                child: const Text('保存'),
+              ),
+            ],
+          ),
         ),
       ),
     );

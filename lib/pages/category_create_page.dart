@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../widgets/loading_overlay.dart';
+
 import '../providers/current_household_provider.dart';
 import '../services/category_service.dart';
 
@@ -18,6 +20,8 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
 
   String? selectedParentId;
 
+  bool isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -34,69 +38,49 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
       return;
     }
 
-    final categories = await CategoryService.getCategories(householdId);
-
-    final parents = categories
-        .where((c) => c['parent_category_id'] == null)
-        .toList();
-
-    if (!mounted) return;
-
     setState(() {
-      parentCategories = parents;
-
-      if (parents.isNotEmpty) {
-        selectedParentId = parents.first['id'];
-      }
+      isLoading = true;
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('カテゴリ追加')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            DropdownButtonFormField<String>(
-              value: selectedParentId,
-              decoration: const InputDecoration(labelText: '親カテゴリ'),
-              items: parentCategories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category['id'],
-                  child: Text(category['name']),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedParentId = value;
-                });
-              },
-            ),
+    try {
+      final categories = await CategoryService.getCategories(householdId);
 
-            const SizedBox(height: 16),
+      final parents = categories
+          .where((c) => c['parent_category_id'] == null)
+          .toList();
 
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'カテゴリ名'),
-            ),
+      if (!mounted) {
+        return;
+      }
 
-            const SizedBox(height: 24),
+      setState(() {
+        parentCategories = parents;
 
-            ElevatedButton(onPressed: createCategory, child: const Text('登録')),
-          ],
-        ),
-      ),
-    );
+        if (parents.isNotEmpty) {
+          selectedParentId = parents.first['id'];
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> createCategory() async {
-    if (nameController.text.isEmpty) {
+    if (nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('カテゴリ名を入力してください')));
+
       return;
     }
 
     if (selectedParentId == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('親カテゴリを選択してください')));
+
       return;
     }
 
@@ -106,14 +90,85 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
       return;
     }
 
-    await CategoryService.createCategory(
-      householdId: householdId,
-      parentCategoryId: selectedParentId!,
-      name: nameController.text,
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await CategoryService.createCategory(
+        householdId: householdId,
+        parentCategoryId: selectedParentId!,
+        name: nameController.text.trim(),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('カテゴリを作成しました')));
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('カテゴリ追加')),
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        message: 'カテゴリを作成中...',
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedParentId,
+                decoration: const InputDecoration(labelText: '親カテゴリ'),
+                items: parentCategories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category['id'],
+                    child: Text(category['name']),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedParentId = value;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'カテゴリ名'),
+              ),
+
+              const SizedBox(height: 24),
+
+              ElevatedButton(
+                onPressed: isLoading ? null : createCategory,
+                child: const Text('登録'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
-
-    if (!mounted) return;
-
-    Navigator.pop(context);
   }
 }
