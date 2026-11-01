@@ -48,7 +48,17 @@ class _AddExpensePageState extends State<AddExpensePage> {
       return;
     }
 
-    final result = await CategoryService.getParentCategories(householdId);
+    final result = await CategoryService.getAllCategories(householdId);
+
+    print('========== Categories ==========');
+
+    for (final c in result) {
+      print(
+        'name=${c['name']} '
+        'id=${c['id']} '
+        'parent=${c['parent_category_id']}',
+      );
+    }
 
     final parents = result
         .where((c) => c['parent_category_id'] == null)
@@ -60,7 +70,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
     setState(() {
       categories = result;
-
       parentCategories = parents;
 
       if (parents.isNotEmpty) {
@@ -70,11 +79,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
             .where((c) => c['parent_category_id'] == selectedParentId)
             .toList();
 
-        if (childCategories.isNotEmpty) {
-          selectedChildId = childCategories.first['id'];
-        } else {
-          selectedChildId = null;
-        }
+        print('selectedParentId = $selectedParentId');
+        print('child count = ${childCategories.length}');
+
+        selectedChildId = childCategories.isNotEmpty
+            ? childCategories.first['id']
+            : null;
       }
     });
   }
@@ -109,9 +119,11 @@ class _AddExpensePageState extends State<AddExpensePage> {
         return;
       }
 
-      if (selectedChildId == null) {
+      final categoryId = selectedChildId ?? selectedParentId;
+
+      if (categoryId == null) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('子カテゴリを選択してください')));
+            .showSnackBar(const SnackBar(content: Text('カテゴリを選択してください')));
 
         return;
       }
@@ -134,7 +146,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
       await Supabase.instance.client.from('expenses').insert({
         'household_id': householdId,
         'user_id': user.id,
-        'category_id': selectedChildId,
+        'category_id': categoryId,
         'payer_user_id': user.id,
         'amount': int.parse(amountController.text),
         'expense_date': selectedDate.toIso8601String().substring(0, 10),

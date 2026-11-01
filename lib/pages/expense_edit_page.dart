@@ -54,7 +54,7 @@ class _ExpenseEditPageState extends State<ExpenseEditPage> {
       return;
     }
 
-    final result = await CategoryService.getParentCategories(householdId);
+    final result = await CategoryService.getAllCategories(householdId);
 
     final parents = result
         .where((c) => c['parent_category_id'] == null)
@@ -120,12 +120,20 @@ class _ExpenseEditPageState extends State<ExpenseEditPage> {
 
   Future<void> updateExpense() async {
     try {
+      final categoryId = selectedChildId ?? selectedParentId;
+
+      if (categoryId == null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('カテゴリを選択してください')));
+        return;
+      }
+
       await Supabase.instance.client
           .from('expenses')
           .update({
             'amount': int.parse(amountController.text),
             'memo': memoController.text,
-            'category_id': selectedChildId,
+            'category_id': categoryId,
             'expense_date': selectedDate.toIso8601String().substring(0, 10),
           })
           .eq('id', widget.expense['id']);

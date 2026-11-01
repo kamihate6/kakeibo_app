@@ -15,41 +15,46 @@ class _AuthPageState extends State<AuthPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
+  bool isLoading = false;
+
   Future<void> signUp() async {
     try {
-      final response = await Supabase.instance.client.auth.signUp(
+      setState(() {
+        isLoading = true;
+      });
+
+      await Supabase.instance.client.auth.signUp(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      final user = response.user;
+      if (!mounted) return;
 
-      if (user != null) {
-        await Supabase.instance.client.from('profiles').insert({
-          'id': user.id,
-          'display_name': emailController.text.split('@').first,
-        });
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('登録成功')));
-      }
-
-      print('AUTH SUCCESS');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('登録しました。確認メールが届いている場合は認証後にログインしてください。')),
+      );
     } catch (e) {
-      print('ERROR');
-      print(e);
+      debugPrint('SIGNUP ERROR: $e');
 
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        setState(() {
+          isLoading = false;
+        });
       }
     }
   }
 
   Future<void> signIn() async {
     try {
+      setState(() {
+        isLoading = true;
+      });
+
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -57,7 +62,9 @@ class _AuthPageState extends State<AuthPage> {
 
       final user = response.user;
 
-      if (user == null) return;
+      if (user == null) {
+        throw Exception('ログインに失敗しました');
+      }
 
       final members = await Supabase.instance.client
           .from('household_members')
@@ -78,11 +85,26 @@ class _AuthPageState extends State<AuthPage> {
         );
       }
     } catch (e) {
+      debugPrint('LOGIN ERROR: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        setState(() {
+          isLoading = false;
+        });
       }
     }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -104,9 +126,13 @@ class _AuthPageState extends State<AuthPage> {
               decoration: const InputDecoration(labelText: 'パスワード'),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: signUp, child: const Text('新規登録')),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: signIn, child: const Text('ログイン')),
+            if (isLoading)
+              const CircularProgressIndicator()
+            else ...[
+              ElevatedButton(onPressed: signUp, child: const Text('新規登録')),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: signIn, child: const Text('ログイン')),
+            ],
           ],
         ),
       ),
