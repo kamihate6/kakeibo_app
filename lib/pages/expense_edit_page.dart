@@ -56,6 +56,13 @@ class _ExpenseEditPageState extends State<ExpenseEditPage> {
 
     final result = await CategoryService.getAllCategories(householdId);
 
+    result.sort((a, b) {
+      final aOrder = a['sort_order'] ?? 0;
+      final bOrder = b['sort_order'] ?? 0;
+
+      return aOrder.compareTo(bOrder);
+    });
+
     final parents = result
         .where((c) => c['parent_category_id'] == null)
         .toList();

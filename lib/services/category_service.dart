@@ -37,7 +37,7 @@ class CategoryService {
 
   static Future<void> createCategory({
     required String householdId,
-    required String parentCategoryId,
+    String? parentCategoryId,
     required String name,
   }) async {
     await Supabase.instance.client.from('categories').insert({

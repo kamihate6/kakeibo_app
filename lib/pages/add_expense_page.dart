@@ -50,15 +50,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
     final result = await CategoryService.getAllCategories(householdId);
 
-    print('========== Categories ==========');
+    result.sort((a, b) {
+      final aOrder = a['sort_order'] ?? 0;
+      final bOrder = b['sort_order'] ?? 0;
 
-    for (final c in result) {
-      print(
-        'name=${c['name']} '
-        'id=${c['id']} '
-        'parent=${c['parent_category_id']}',
-      );
-    }
+      return aOrder.compareTo(bOrder);
+    });
 
     final parents = result
         .where((c) => c['parent_category_id'] == null)

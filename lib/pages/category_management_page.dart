@@ -44,6 +44,30 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     try {
       final result = await CategoryService.getCategories(householdId);
 
+      for (final c in result) {
+        debugPrint('${c['name']} sort=${c['sort_order']}');
+      }
+
+      result.sort((a, b) {
+        final aOrder = a['sort_order'] ?? 0;
+        final bOrder = b['sort_order'] ?? 0;
+
+        return aOrder.compareTo(bOrder);
+      });
+
+      debugPrint('---- after sort ----');
+
+      for (final c in result) {
+        debugPrint('${c['name']} sort=${c['sort_order']}');
+      }
+
+      result.sort((a, b) {
+        final aOrder = a['sort_order'] ?? 9999;
+        final bOrder = b['sort_order'] ?? 9999;
+
+        return aOrder.compareTo(bOrder);
+      });
+
       if (!mounted) {
         return;
       }

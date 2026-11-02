@@ -20,6 +20,8 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
 
   String? selectedParentId;
 
+  bool isParentCategory = false;
+
   bool isLoading = false;
 
   @override
@@ -44,6 +46,13 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
 
     try {
       final categories = await CategoryService.getCategories(householdId);
+
+      categories.sort((a, b) {
+        final aOrder = a['sort_order'] ?? 0;
+        final bOrder = b['sort_order'] ?? 0;
+
+        return aOrder.compareTo(bOrder);
+      });
 
       final parents = categories
           .where((c) => c['parent_category_id'] == null)
@@ -77,7 +86,7 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
       return;
     }
 
-    if (selectedParentId == null) {
+    if (!isParentCategory && selectedParentId == null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('親カテゴリを選択してください')));
 
@@ -97,7 +106,7 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
     try {
       await CategoryService.createCategory(
         householdId: householdId,
-        parentCategoryId: selectedParentId!,
+        parentCategoryId: isParentCategory ? null : selectedParentId,
         name: nameController.text.trim(),
       );
 
@@ -136,21 +145,31 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                value: selectedParentId,
-                decoration: const InputDecoration(labelText: '親カテゴリ'),
-                items: parentCategories.map((category) {
-                  return DropdownMenuItem<String>(
-                    value: category['id'],
-                    child: Text(category['name']),
-                  );
-                }).toList(),
+              SwitchListTile(
+                title: const Text('親カテゴリとして作成'),
+                value: isParentCategory,
                 onChanged: (value) {
                   setState(() {
-                    selectedParentId = value;
+                    isParentCategory = value;
                   });
                 },
               ),
+              if (!isParentCategory)
+                DropdownButtonFormField<String>(
+                  value: selectedParentId,
+                  decoration: const InputDecoration(labelText: '親カテゴリ'),
+                  items: parentCategories.map((category) {
+                    return DropdownMenuItem<String>(
+                      value: category['id'],
+                      child: Text(category['name']),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedParentId = value;
+                    });
+                  },
+                ),
 
               const SizedBox(height: 16),
 
