@@ -44,17 +44,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     try {
       final result = await CategoryService.getCategories(householdId);
 
-      for (final c in result) {
-        debugPrint('${c['name']} sort=${c['sort_order']}');
-      }
-
-      result.sort((a, b) {
-        final aOrder = a['sort_order'] ?? 0;
-        final bOrder = b['sort_order'] ?? 0;
-
-        return aOrder.compareTo(bOrder);
-      });
-
       debugPrint('---- after sort ----');
 
       for (final c in result) {
@@ -84,6 +73,124 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     }
   }
 
+  Future<void> moveCategoryUp(Map<String, dynamic> category) async {
+    final currentOrder = category['sort_order'];
+
+    final target = categories
+        .where(
+          (c) =>
+              c['parent_category_id'] == null && c['sort_order'] < currentOrder,
+        )
+        .toList();
+
+    if (target.isEmpty) return;
+
+    target.sort((a, b) => b['sort_order'].compareTo(a['sort_order']));
+
+    final swap = target.first;
+
+    await CategoryService.updateSortOrder(
+      categoryId: category['id'],
+      sortOrder: swap['sort_order'],
+    );
+
+    await CategoryService.updateSortOrder(
+      categoryId: swap['id'],
+      sortOrder: currentOrder,
+    );
+
+    await loadCategories();
+  }
+
+  Future<void> moveCategoryDown(Map<String, dynamic> category) async {
+    final currentOrder = category['sort_order'];
+
+    final target = categories
+        .where(
+          (c) =>
+              c['parent_category_id'] == null && c['sort_order'] > currentOrder,
+        )
+        .toList();
+
+    if (target.isEmpty) return;
+
+    target.sort((a, b) => a['sort_order'].compareTo(b['sort_order']));
+
+    final swap = target.first;
+
+    await CategoryService.updateSortOrder(
+      categoryId: category['id'],
+      sortOrder: swap['sort_order'],
+    );
+
+    await CategoryService.updateSortOrder(
+      categoryId: swap['id'],
+      sortOrder: currentOrder,
+    );
+
+    await loadCategories();
+  }
+
+  Future<void> moveChildCategoryUp(Map<String, dynamic> category) async {
+    final currentOrder = category['sort_order'];
+
+    final target = categories
+        .where(
+          (c) =>
+              c['parent_category_id'] == category['parent_category_id'] &&
+              c['sort_order'] < currentOrder,
+        )
+        .toList();
+
+    if (target.isEmpty) return;
+
+    target.sort((a, b) => b['sort_order'].compareTo(a['sort_order']));
+
+    final swap = target.first;
+
+    await CategoryService.updateSortOrder(
+      categoryId: category['id'],
+      sortOrder: swap['sort_order'],
+    );
+
+    await CategoryService.updateSortOrder(
+      categoryId: swap['id'],
+      sortOrder: currentOrder,
+    );
+
+    await loadCategories();
+  }
+
+  Future<void> moveChildCategoryDown(Map<String, dynamic> category) async {
+    final currentOrder = category['sort_order'];
+
+    final target = categories
+        .where(
+          (c) =>
+              c['parent_category_id'] == category['parent_category_id'] &&
+              c['sort_order'] > currentOrder,
+        )
+        .toList();
+
+    if (target.isEmpty) return;
+
+    target.sort((a, b) => a['sort_order'].compareTo(b['sort_order']));
+
+    final swap = target.first;
+
+    await CategoryService.updateSortOrder(
+      categoryId: category['id'],
+      sortOrder: swap['sort_order'],
+    );
+
+    await CategoryService.updateSortOrder(
+      categoryId: swap['id'],
+      sortOrder: currentOrder,
+    );
+
+    await loadCategories();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,11 +205,31 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                 final childCategories = categories
                     .where((c) => c['parent_category_id'] == parent['id'])
                     .toList();
+                childCategories.sort(
+                  (a, b) => (a['sort_order'] ?? 9999).compareTo(
+                    b['sort_order'] ?? 9999,
+                  ),
+                );
 
                 return ExpansionTile(
                   title: Row(
                     children: [
                       Expanded(child: Text(parent['name'])),
+
+                      IconButton(
+                        icon: const Icon(Icons.arrow_upward),
+                        onPressed: () {
+                          moveCategoryUp(parent);
+                        },
+                      ),
+
+                      IconButton(
+                        icon: const Icon(Icons.arrow_downward),
+                        onPressed: () {
+                          moveCategoryDown(parent);
+                        },
+                      ),
+
                       IconButton(
                         icon: const Icon(Icons.edit),
                         onPressed: () {
@@ -123,18 +250,36 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                     return ListTile(
                       leading: const Icon(Icons.subdirectory_arrow_right),
                       title: Text(child['name']),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CategoryEditPage(category: child),
-                            ),
-                          ).then((_) {
-                            loadCategories();
-                          });
-                        },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_upward),
+                            onPressed: () {
+                              moveChildCategoryUp(child);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_downward),
+                            onPressed: () {
+                              moveChildCategoryDown(child);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      CategoryEditPage(category: child),
+                                ),
+                              ).then((_) {
+                                loadCategories();
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     );
                   }).toList(),

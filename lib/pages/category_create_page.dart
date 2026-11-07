@@ -47,13 +47,6 @@ class _CategoryCreatePageState extends State<CategoryCreatePage> {
     try {
       final categories = await CategoryService.getCategories(householdId);
 
-      categories.sort((a, b) {
-        final aOrder = a['sort_order'] ?? 0;
-        final bOrder = b['sort_order'] ?? 0;
-
-        return aOrder.compareTo(bOrder);
-      });
-
       final parents = categories
           .where((c) => c['parent_category_id'] == null)
           .toList();
